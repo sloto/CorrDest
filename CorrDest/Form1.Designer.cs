@@ -36,16 +36,15 @@
             // 
             // pictureBox1
             // 
-            this.pictureBox1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(128)))), ((int)(((byte)(128)))), ((int)(((byte)(255)))));
             this.pictureBox1.Location = new System.Drawing.Point(12, 50);
             this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(192, 360);
+            this.pictureBox1.Size = new System.Drawing.Size(291, 362);
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
             // 
             // pictureBox2
             // 
-            this.pictureBox2.Location = new System.Drawing.Point(239, 50);
+            this.pictureBox2.Location = new System.Drawing.Point(335, 50);
             this.pictureBox2.Name = "pictureBox2";
             this.pictureBox2.Size = new System.Drawing.Size(72, 50);
             this.pictureBox2.TabIndex = 1;
@@ -55,11 +54,12 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(323, 422);
+            this.ClientSize = new System.Drawing.Size(419, 659);
             this.Controls.Add(this.pictureBox2);
             this.Controls.Add(this.pictureBox1);
             this.Name = "Form1";
             this.Text = "Form1";
+            this.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.Form1_KeyPress);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).EndInit();
             this.ResumeLayout(false);
