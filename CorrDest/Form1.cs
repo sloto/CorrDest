@@ -21,9 +21,7 @@ namespace CorrDest
 
         private void Form1_KeyPress(object sender, KeyPressEventArgs e)
         {
-            g_static.DrawImage(new Bitmap(bg/*Properties.Resources.bg1*/, pictureBox1.Size), 0, 0);
-            //g_static.DrawImage(new Bitmap(blocks[0], pictureBox1.Size), 0, 0);
-            pictureBox1.Invalidate();
+            SeedVirus(15);
         }
 
         public Form1()
@@ -35,17 +33,10 @@ namespace CorrDest
             v_width = (pictureBox1.Width - 2) / v_x_amount;
             pictureBox1.Height = v_y_amount * v_width + 2;
             field = new int[v_x_amount, v_y_amount];
-            for (int i = 0; i < v_x_amount; i++)
-            {
-                for (int j = 0; j < v_y_amount; j++)
-                {
-                    field[i, j] = -1;
-                }
-            }
             blocks = new Bitmap[type_amount];
             try
             {
-                bg = new Bitmap(Properties.Resources.background, pictureBox1.Size);
+                bg = Properties.Resources.background;
                 blocks[0] = new Bitmap( Properties.Resources.im0, v_width, v_width);
                 blocks[1] = new Bitmap( Properties.Resources.im1, v_width, v_width);
                 blocks[2] = new Bitmap( Properties.Resources.im2, v_width, v_width);
@@ -63,7 +54,7 @@ namespace CorrDest
             {
                 blocks[i].MakeTransparent();
             }
-            pictureBox1.BackgroundImage = bg;
+            pictureBox1.BackgroundImage = new Bitmap(bg, pictureBox1.Size);
             g_static = Graphics.FromImage(pictureBox1.BackgroundImage);
             rng = new Random();
             virus_count = 15;
@@ -73,6 +64,14 @@ namespace CorrDest
         }
         private void SeedVirus(int count) //это же по значению, верно? если сломается, то из-за этого
         {
+            g_static.DrawImage(new Bitmap(bg, pictureBox1.Size), 0, 0);
+            for (int i = 0; i < v_x_amount; i++)
+            {
+                for (int j = 0; j < v_y_amount; j++)
+                {
+                    field[i, j] = -1;
+                }
+            }
             while (count > 0)
             {
                 int type = rng.Next(type_amount); //возможно, стоит контролировать, чтобы было примерное одинаковое количество вирусов каждого типа
@@ -85,7 +84,7 @@ namespace CorrDest
                 }
             }
             Brush[] pp = { Brushes.DarkBlue, Brushes.DarkRed, Brushes.DarkOrange };
-            g_static.DrawImage(new Bitmap( bg, pictureBox1.Size), 0, 0);
+            
             for (int i = 0; i < v_x_amount; i++)
             {
                 for (int j = 0; j < v_y_amount - 2; j++)
