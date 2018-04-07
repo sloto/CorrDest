@@ -18,7 +18,7 @@ namespace CorrDest
         Graphics g_static, g_failing, pb2;
         Random rng;
         int virus_count, type_amount, v_y_amount, v_x_amount, v_width, period;
-        int[] sending, falling;
+        int[] sending, falling_x, falling_y;
 
         private void timer1_Tick(object sender, EventArgs e)
         {
@@ -27,7 +27,8 @@ namespace CorrDest
 
         private void Form1_KeyPress(object sender, KeyPressEventArgs e)
         {
-            SeedVirus(15 , 4);
+            //SeedVirus(15 , 4);
+            SpawnFalling();
         }
 
         public Form1()
@@ -41,7 +42,8 @@ namespace CorrDest
             pictureBox1.Height = v_y_amount * v_width + 2;
             field = new int[v_x_amount, v_y_amount];
             blocks = new Bitmap[2*type_amount];
-            falling = new int[2];
+            falling_x = new int[2];
+            falling_y = new int[2];
             sending = new int[4];
             try
             {
@@ -52,9 +54,6 @@ namespace CorrDest
                 blocks[3] = new Bitmap(Properties.Resources.im3, v_width, v_width);
                 blocks[4] = new Bitmap(Properties.Resources.im4, v_width, v_width);
                 blocks[5] = new Bitmap(Properties.Resources.im5, v_width, v_width);
-                //blocks[0] = Properties.Resources.im0;
-                //blocks[1] = Properties.Resources.im1;
-                //blocks[2] = Properties.Resources.im2;
             }
             catch (Exception except)
             {
@@ -70,14 +69,15 @@ namespace CorrDest
             pictureBox2.BackgroundImage = new Bitmap(bg, pictureBox2.Size);
             pb2 = Graphics.FromImage(pictureBox2.BackgroundImage);
             g_static = Graphics.FromImage(pictureBox1.BackgroundImage);
+            g_failing = Graphics.FromImage(pictureBox1.BackgroundImage); 
             rng = new Random();
             virus_count = 15;
             SeedVirus(virus_count, 4);
             for (int i = 0; i < sending.Length; i++)
             {
-                sending[i] = rng.Next(type_amount);
+                sending[i] = rng.Next(type_amount) + type_amount;
             }
-
+            
 
         }
         private Rectangle get_rectangle(int i, int j)
@@ -104,19 +104,15 @@ namespace CorrDest
                     count--;
                     field[i, j] = type;
                 }
-            }
-            Brush[] pp = { Brushes.DarkBlue, Brushes.DarkRed, Brushes.DarkOrange };
-            
+            }            
             for (int i = 0; i < v_x_amount; i++)
             {
                 for (int j = 0; j < v_y_amount; j++)
-                {
-                    //Rectangle current_block = new Rectangle(1 + i * v_width, pictureBox1.Height - (j + 1) * v_width - 1, v_width, v_width);
+                {                    
                     if (field[i, j] != -1)
                     {
                         g_static.DrawImage(blocks[field[i, j]], get_rectangle(i, j));
                     }
-                    //g_static.DrawRectangle(new Pen(Color.Black), current_block);
                     
                 }
             }
@@ -126,17 +122,23 @@ namespace CorrDest
         }
         private void SpawnFalling()
         {
-            falling[0] = v_x_amount / 2;
-            falling[1] = v_x_amount / 2 + 1;
+            falling_x[0] = v_x_amount / 2 - 1;
+            falling_x[1] = v_x_amount / 2;
+            falling_y[0] = v_y_amount - 1;
+            falling_y[1] = v_y_amount - 1;
             sending[0] = sending[2];
             sending[1] = sending[3];
             sending[2] = rng.Next(type_amount) + type_amount;
             sending[3] = rng.Next(type_amount) + type_amount;
-            pb2.DrawImage(blocks[type_amount + sending[2]], 3, 3);
-            pb2.DrawImage(blocks[type_amount + sending[3]], v_width, 3);
+            pb2.DrawImage(new Bitmap(bg, pictureBox2.Size), 0, 0);
+            pb2.DrawImage(blocks[sending[2]], 3, 3);
+            pb2.DrawImage(blocks[sending[3]], v_width + 3, 3);
             pictureBox2.Invalidate();
-            
-
+            for (int i = 0; i < 2; i++)
+            {
+                g_failing.DrawImage(blocks[sending[i]], get_rectangle(falling_x[i], falling_y[i]));
+                pictureBox1.Invalidate(get_rectangle(falling_x[i], falling_y[i]));
+            }
         }
     }
 }
