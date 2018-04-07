@@ -20,9 +20,25 @@ namespace CorrDest
         int virus_count, type_amount, v_y_amount, v_x_amount, v_width, period;
         int[] sending, falling_x, falling_y;
 
+        private void timer2_Tick(object sender, EventArgs e)
+        {
+            SpawnFalling();
+            timer2.Enabled = false;
+            timer1.Enabled = true;
+        }
+
         private void timer1_Tick(object sender, EventArgs e)
         {
-
+            FallDown();
+            if (!isFallingPossible())
+            {
+                for (int i = 0; i < falling_x.Length; i++)
+                {
+                    field[falling_x[i], falling_y[i]] = sending[i];
+                }
+                timer2.Enabled = true;
+                timer1.Enabled = false;
+            }
         }
 
         private void Form1_KeyPress(object sender, KeyPressEventArgs e)
@@ -72,12 +88,17 @@ namespace CorrDest
             g_failing = Graphics.FromImage(pictureBox1.BackgroundImage); 
             rng = new Random();
             virus_count = 15;
-            SeedVirus(virus_count, 4);
+            SeedVirus(virus_count, 6);
             for (int i = 0; i < sending.Length; i++)
             {
                 sending[i] = rng.Next(type_amount) + type_amount;
             }
-            
+            SpawnFalling();
+            timer1.Enabled = true;
+            timer1.Interval = 500;
+            timer2.Enabled = false;
+            timer2.Interval = timer1.Interval;
+
 
         }
         private Rectangle get_rectangle(int i, int j)
@@ -119,6 +140,29 @@ namespace CorrDest
             pictureBox1.Invalidate();
 
 
+        }
+        private bool isFallingPossible()
+        {
+            bool falling_is_possible = true;
+            for (int i = 0; i < falling_y.Length; i++)
+            {
+                falling_is_possible &= (falling_y[i] - 1 >= 0) && (field[falling_x[i], falling_y[i] - 1] == -1);
+            }
+            return falling_is_possible;
+        }
+        private void FallDown()
+        {
+            if (!isFallingPossible())
+            {
+                return;
+            }
+            for (int i = 0; i < falling_y.Length; i++) //перерисовывать несколько маленьких кусочков или сразу все поле?Ы
+            {
+                g_failing.DrawImage(bg, get_rectangle(falling_x[i], falling_y[i]));
+                falling_y[i]--;
+                g_failing.DrawImage(blocks[sending[i]], get_rectangle(falling_x[i], falling_y[i]));
+            }
+            pictureBox1.Invalidate();
         }
         private void SpawnFalling()
         {
