@@ -19,6 +19,60 @@ namespace CorrDest
         Random rng;
         int virus_count, type_amount, v_y_amount, v_x_amount, v_width, period;
         int[] sending, falling_x, falling_y;
+        bool left, right, up, down;
+
+        private void Form1_KeyUp(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Right) { right = false; }
+            if (e.KeyCode == Keys.Left) { left = false; }
+            move_timer.Enabled = left || right || up || down;
+        }
+
+        private void Form1_KeyDown(object sender, KeyEventArgs e)
+        {
+            right = e.KeyCode == Keys.Right;
+            left = e.KeyCode == Keys.Left;
+            move_timer.Enabled = left || right || up || down;
+
+        }
+
+        private void move_timer_Tick(object sender, EventArgs e)
+        {
+            bool move_right = right;
+            bool move_left = left;
+            for (int i = 0; i < falling_x.Length; i++)
+            {
+                move_right &= (falling_x[i] < v_x_amount - 1) && (field[falling_x[i] + 1, falling_y[i]] == -1);
+            }
+            for (int i = 0; i < falling_x.Length; i++)
+            {
+                move_left &= (falling_x[i] > 0) && (field[falling_x[i] - 1, falling_y[i]] == -1);
+            }
+            if (move_right)
+            {
+                for (int i = 0; i < falling_x.Length; i++)
+                    g_failing.DrawImage(bg, get_rectangle(falling_x[i], falling_y[i]));
+
+                for (int i = 0; i < falling_x.Length; i++)
+                {
+                    falling_x[i]++;
+                    g_failing.DrawImage(blocks[sending[i]], get_rectangle(falling_x[i], falling_y[i])); 
+                }
+                pictureBox1.Invalidate();
+            }
+            if (move_left)
+            {
+                for (int i = 0; i < falling_x.Length; i++)
+                    g_failing.DrawImage(bg, get_rectangle(falling_x[i], falling_y[i]));
+
+                for (int i = 0; i < falling_x.Length; i++)
+                {
+                    falling_x[i]--;
+                    g_failing.DrawImage(blocks[sending[i]], get_rectangle(falling_x[i], falling_y[i]));
+                }
+                pictureBox1.Invalidate();
+            }
+        }
 
         private void timer2_Tick(object sender, EventArgs e)
         {
@@ -29,22 +83,29 @@ namespace CorrDest
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            FallDown();
-            if (!isFallingPossible())
+
+            if (isFallingPossible())
+            {
+                FallDown();
+            }
+            else
             {
                 for (int i = 0; i < falling_x.Length; i++)
                 {
                     field[falling_x[i], falling_y[i]] = sending[i];
                 }
+                FieldInvalidate();
                 timer2.Enabled = true;
                 timer1.Enabled = false;
+                move_timer.Enabled = false;
+                move_timer.Interval = 35;
             }
         }
 
         private void Form1_KeyPress(object sender, KeyPressEventArgs e)
         {
             //SeedVirus(15 , 4);
-            SpawnFalling();
+            //SpawnFalling();
         }
 
         public Form1()
@@ -98,6 +159,7 @@ namespace CorrDest
             timer1.Interval = 500;
             timer2.Enabled = false;
             timer2.Interval = timer1.Interval;
+            right = left = up = down = false;
 
 
         }
@@ -105,9 +167,27 @@ namespace CorrDest
         {
             return new Rectangle(1 + i * v_width, pictureBox1.Height - (j + 1) * v_width - 1, v_width, v_width);
         }
-        private void SeedVirus(int count, int free_space) //это же по значению, верно? если сломается, то из-за этого
+
+        private void FieldInvalidate()
         {
             g_static.DrawImage(new Bitmap(bg, pictureBox1.Size), 0, 0);
+            for (int i = 0; i < v_x_amount; i++)
+            {
+                for (int j = 0; j < v_y_amount; j++)
+                {
+                    if (field[i, j] != -1)
+                    {
+                        g_static.DrawImage(blocks[field[i, j]], get_rectangle(i, j));
+                    }
+
+                }
+            }
+            pictureBox1.Invalidate();
+        }
+
+        private void SeedVirus(int count, int free_space) //это же по значению, верно? если сломается, то из-за этого
+        {
+            
             for (int i = 0; i < v_x_amount; i++)
             {
                 for (int j = 0; j < v_y_amount; j++)
@@ -125,20 +205,8 @@ namespace CorrDest
                     count--;
                     field[i, j] = type;
                 }
-            }            
-            for (int i = 0; i < v_x_amount; i++)
-            {
-                for (int j = 0; j < v_y_amount; j++)
-                {                    
-                    if (field[i, j] != -1)
-                    {
-                        g_static.DrawImage(blocks[field[i, j]], get_rectangle(i, j));
-                    }
-                    
-                }
             }
-            pictureBox1.Invalidate();
-
+            FieldInvalidate();
 
         }
         private bool isFallingPossible()
@@ -152,10 +220,10 @@ namespace CorrDest
         }
         private void FallDown()
         {
-            if (!isFallingPossible())
-            {
-                return;
-            }
+            //if (!isFallingPossible())
+            //{
+            //    return;
+            //}
             for (int i = 0; i < falling_y.Length; i++) //перерисовывать несколько маленьких кусочков или сразу все поле?Ы
             {
                 g_failing.DrawImage(bg, get_rectangle(falling_x[i], falling_y[i]));
