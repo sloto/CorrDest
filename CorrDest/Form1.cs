@@ -33,6 +33,10 @@ namespace CorrDest
             right = e.KeyCode == Keys.Right;
             left = e.KeyCode == Keys.Left;
             move_timer.Enabled = left || right || up || down;
+            if (e.KeyCode == Keys.Space)
+            {
+                timer1.Enabled = !timer1.Enabled;
+            }
 
         }
 
@@ -73,12 +77,25 @@ namespace CorrDest
                 pictureBox1.Invalidate();
             }
         }
-
+        
         private void timer2_Tick(object sender, EventArgs e)
         {
-            SpawnFalling();
+            List<Tuple<int, int>> toDestroy = new List<Tuple<int, int>>();
+            //bool[,] burned = new bool[v_x_amount, v_y_amount];
+            //DFS(falling_x[0], falling_y[0], ref burned, ref toDestroy);
+            SelectDestructionField(falling_x[0], falling_y[0], ref toDestroy);
+            SelectDestructionField(falling_x[1], falling_y[1], ref toDestroy);
+            foreach (Tuple<int, int> t in toDestroy)
+            {
+                field[t.Item1, t.Item2] = -1;
+
+            }
+            FieldInvalidate();   
+            
+            
             timer2.Enabled = false;
             timer1.Enabled = true;
+            SpawnFalling();
         }
 
         private void timer1_Tick(object sender, EventArgs e)
@@ -106,6 +123,7 @@ namespace CorrDest
         {
             //SeedVirus(15 , 4);
             //SpawnFalling();
+            
         }
 
         public Form1()
@@ -122,6 +140,7 @@ namespace CorrDest
             falling_x = new int[2];
             falling_y = new int[2];
             sending = new int[4];
+            List<Tuple<int, int>> burning_blocks = new List<Tuple<int, int>>();
             try
             {
                 bg = Properties.Resources.background;
@@ -168,6 +187,69 @@ namespace CorrDest
             return new Rectangle(1 + i * v_width, pictureBox1.Height - (j + 1) * v_width - 1, v_width, v_width);
         }
 
+        private void SelectDestructionField(int i, int j, ref List<Tuple<int, int>> burned)
+        {
+            List<Tuple<int, int>> horizontal = new List<Tuple<int, int>>(), vertical = new List<Tuple<int, int>>();
+            for (int k = i + 1; k < v_x_amount && field[k, j] % type_amount == field[i, j] % type_amount; k++)
+            {
+                Tuple<int, int> t = new Tuple<int, int>(k,j);
+                if (!horizontal.Contains(t))
+                {
+                    horizontal.Add(t);
+                }
+            }
+            for (int k = i - 1; k >= 0 && field[k, j] % type_amount == field[i, j] % type_amount; k--)
+            {
+                Tuple<int, int> t = new Tuple<int, int>(k, j);
+                if (!horizontal.Contains(t))
+                {
+                    horizontal.Add(t);
+                }
+            }
+
+
+            for (int m = j + 1; m < v_y_amount && field[i, m] % type_amount == field[i, j] % type_amount; m++)
+            {
+                Tuple<int, int> t = new Tuple<int, int>(i, m);
+                if (!vertical.Contains(t))
+                {
+                    vertical.Add(t);
+                }
+            }
+            for (int m = j - 1; m >= 0 && field[i, m] % type_amount == field[i, j] % type_amount; m--)
+            {
+                Tuple<int, int> t = new Tuple<int, int>(i, m);
+                if (!vertical.Contains(t))
+                {
+                    vertical.Add(t);
+                }
+            }
+            if (horizontal.Count >= 2 || vertical.Count >= 2)
+            {
+                burned.Add(new Tuple<int, int>(i, j));
+            }
+            if (horizontal.Count >= 2)
+            {
+                foreach (Tuple<int,int> t in horizontal)
+                {
+                    if (!burned.Contains(t))
+                        burned.Add(t);
+                }
+                
+            }
+            if (vertical.Count >= 2)
+            {
+                foreach (Tuple<int, int> t in vertical)
+                {
+                    if (!burned.Contains(t))
+                        burned.Add(t);
+                }
+
+            }
+
+        }
+
+       
         private void FieldInvalidate()
         {
             g_static.DrawImage(new Bitmap(bg, pictureBox1.Size), 0, 0);
