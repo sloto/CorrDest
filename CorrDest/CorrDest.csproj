@@ -103,6 +103,42 @@
   <ItemGroup>
     <None Include="Resources\im4.png" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\mask0.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\mask1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\mask2.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\mask3.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\mask4.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\mask5.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\msk4.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\msk0.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\msk1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\msk2.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\msk3.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\msk5.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

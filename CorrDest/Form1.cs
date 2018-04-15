@@ -12,13 +12,15 @@ namespace CorrDest
 {
     public partial class Form1 : Form
     {
-        int[,] field;
-        Bitmap[] blocks;
+        Tuple<int,int>[,] field;
+        Bitmap[] positions;
+        Brush[] types;
         Bitmap bg;
         Graphics g_static, g_failing, pb2;
         Random rng;
         int virus_count, type_amount, v_y_amount, v_x_amount, v_width, period;
-        int[] sending, falling_x, falling_y;
+        int[] falling_x, falling_y;
+        Tuple<int,int>[] sending;
         bool left, right, up, down;
 
         private void Form1_KeyUp(object sender, KeyEventArgs e)
@@ -46,11 +48,11 @@ namespace CorrDest
             bool move_left = left;
             for (int i = 0; i < falling_x.Length; i++)
             {
-                move_right &= (falling_x[i] < v_x_amount - 1) && (field[falling_x[i] + 1, falling_y[i]] == -1);
+                move_right &= (falling_x[i] < v_x_amount - 1) && (field[falling_x[i] + 1, falling_y[i]].Item1 == -1);
             }
             for (int i = 0; i < falling_x.Length; i++)
             {
-                move_left &= (falling_x[i] > 0) && (field[falling_x[i] - 1, falling_y[i]] == -1);
+                move_left &= (falling_x[i] > 0) && (field[falling_x[i] - 1, falling_y[i]].Item1 == -1);
             }
             if (move_right)
             {
@@ -60,7 +62,7 @@ namespace CorrDest
                 for (int i = 0; i < falling_x.Length; i++)
                 {
                     falling_x[i]++;
-                    g_failing.DrawImage(blocks[sending[i]], get_rectangle(falling_x[i], falling_y[i])); 
+                    DrawBlock(g_failing, sending[i], falling_x[i], falling_y[i]);
                 }
                 pictureBox1.Invalidate();
             }
@@ -72,7 +74,7 @@ namespace CorrDest
                 for (int i = 0; i < falling_x.Length; i++)
                 {
                     falling_x[i]--;
-                    g_failing.DrawImage(blocks[sending[i]], get_rectangle(falling_x[i], falling_y[i]));
+                    DrawBlock(g_failing, sending[i], falling_x[i], falling_y[i]); 
                 }
                 pictureBox1.Invalidate();
             }
@@ -87,7 +89,7 @@ namespace CorrDest
             SelectDestructionField(falling_x[1], falling_y[1], ref toDestroy);
             foreach (Tuple<int, int> t in toDestroy)
             {
-                field[t.Item1, t.Item2] = -1;
+                field[t.Item1, t.Item2] = new Tuple<int,int>(-1,-1);
 
             }
             FieldInvalidate();   
@@ -135,21 +137,22 @@ namespace CorrDest
             period = 80;
             v_width = (pictureBox1.Width - 2) / v_x_amount;
             pictureBox1.Height = v_y_amount * v_width + 2;
-            field = new int[v_x_amount, v_y_amount];
-            blocks = new Bitmap[2*type_amount];
+            field = new Tuple<int, int>[v_x_amount, v_y_amount];
+            positions = new Bitmap[6];
+            types = new Brush[]{ Brushes.DarkRed, Brushes.DarkSeaGreen, Brushes.Gold};
             falling_x = new int[2];
             falling_y = new int[2];
-            sending = new int[4];
+            sending = new Tuple<int, int>[4];
             List<Tuple<int, int>> burning_blocks = new List<Tuple<int, int>>();
             try
             {
                 bg = Properties.Resources.background;
-                blocks[0] = new Bitmap( Properties.Resources.im0, v_width, v_width);
-                blocks[1] = new Bitmap( Properties.Resources.im1, v_width, v_width);
-                blocks[2] = new Bitmap( Properties.Resources.im2, v_width, v_width);
-                blocks[3] = new Bitmap(Properties.Resources.im3, v_width, v_width);
-                blocks[4] = new Bitmap(Properties.Resources.im4, v_width, v_width);
-                blocks[5] = new Bitmap(Properties.Resources.im5, v_width, v_width);
+                positions[0] = new Bitmap( Properties.Resources.msk0, v_width, v_width);
+                positions[1] = new Bitmap( Properties.Resources.msk1, v_width, v_width);
+                positions[2] = new Bitmap( Properties.Resources.msk2, v_width, v_width);
+                positions[3] = new Bitmap(Properties.Resources.msk3, v_width, v_width);
+                positions[4] = new Bitmap(Properties.Resources.msk4, v_width, v_width);
+                positions[5] = new Bitmap(Properties.Resources.msk5, v_width, v_width);
             }
             catch (Exception except)
             {
@@ -157,10 +160,10 @@ namespace CorrDest
                 Close();
                 return;
             }
-            for (int i = 0; i < blocks.Length; i++)
-            {
-                blocks[i].MakeTransparent();
-            }
+            //for (int i = 0; i < positions.Length; i++)
+            //{
+            //    //positions[i].MakeTransparent();
+            //}
             pictureBox1.BackgroundImage = new Bitmap(bg, pictureBox1.Size);
             pictureBox2.BackgroundImage = new Bitmap(bg, pictureBox2.Size);
             pb2 = Graphics.FromImage(pictureBox2.BackgroundImage);
@@ -171,7 +174,7 @@ namespace CorrDest
             SeedVirus(virus_count, 6);
             for (int i = 0; i < sending.Length; i++)
             {
-                sending[i] = rng.Next(type_amount) + type_amount;
+                sending[i] = new Tuple<int, int>(rng.Next(type_amount), ((i + 1) % 2) * 2);
             }
             SpawnFalling();
             timer1.Enabled = true;
@@ -186,11 +189,15 @@ namespace CorrDest
         {
             return new Rectangle(1 + i * v_width, pictureBox1.Height - (j + 1) * v_width - 1, v_width, v_width);
         }
-
+        private void DrawBlock(Graphics g ,Tuple<int, int> block, int x, int y)
+        {
+            g.FillRectangle(types[block.Item1], get_rectangle(x, y));
+            g.DrawImage(positions[block.Item2], get_rectangle(x, y));
+        }
         private void SelectDestructionField(int i, int j, ref List<Tuple<int, int>> burned)
         {
             List<Tuple<int, int>> horizontal = new List<Tuple<int, int>>(), vertical = new List<Tuple<int, int>>();
-            for (int k = i + 1; k < v_x_amount && field[k, j] % type_amount == field[i, j] % type_amount; k++)
+            for (int k = i + 1; k < v_x_amount && field[k, j].Item1 == field[i, j].Item1; k++)
             {
                 Tuple<int, int> t = new Tuple<int, int>(k,j);
                 if (!horizontal.Contains(t))
@@ -198,7 +205,7 @@ namespace CorrDest
                     horizontal.Add(t);
                 }
             }
-            for (int k = i - 1; k >= 0 && field[k, j] % type_amount == field[i, j] % type_amount; k--)
+            for (int k = i - 1; k >= 0 && field[k, j].Item1 == field[i, j].Item1; k--)
             {
                 Tuple<int, int> t = new Tuple<int, int>(k, j);
                 if (!horizontal.Contains(t))
@@ -208,7 +215,7 @@ namespace CorrDest
             }
 
 
-            for (int m = j + 1; m < v_y_amount && field[i, m] % type_amount == field[i, j] % type_amount; m++)
+            for (int m = j + 1; m < v_y_amount && field[i, m].Item1 == field[i, j].Item1; m++)
             {
                 Tuple<int, int> t = new Tuple<int, int>(i, m);
                 if (!vertical.Contains(t))
@@ -216,7 +223,7 @@ namespace CorrDest
                     vertical.Add(t);
                 }
             }
-            for (int m = j - 1; m >= 0 && field[i, m] % type_amount == field[i, j] % type_amount; m--)
+            for (int m = j - 1; m >= 0 && field[i, m].Item1 == field[i, j].Item1; m--)
             {
                 Tuple<int, int> t = new Tuple<int, int>(i, m);
                 if (!vertical.Contains(t))
@@ -257,9 +264,10 @@ namespace CorrDest
             {
                 for (int j = 0; j < v_y_amount; j++)
                 {
-                    if (field[i, j] != -1)
+                    if (field[i, j].Item1 != -1)
                     {
-                        g_static.DrawImage(blocks[field[i, j]], get_rectangle(i, j));
+                        g_static.FillRectangle(types[field[i, j].Item1], get_rectangle(i, j));
+                        g_static.DrawImage(positions[field[i, j].Item2], get_rectangle(i, j));
                     }
 
                 }
@@ -274,7 +282,7 @@ namespace CorrDest
             {
                 for (int j = 0; j < v_y_amount; j++)
                 {
-                    field[i, j] = -1;
+                    field[i, j] = new Tuple<int, int>(-1,-1);
                 }
             }
             while (count > 0)
@@ -282,10 +290,10 @@ namespace CorrDest
                 int type = rng.Next(type_amount); //возможно, стоит контролировать, чтобы было примерное одинаковое количество вирусов каждого типа
                 int i = rng.Next(v_x_amount);
                 int j = rng.Next(v_y_amount - free_space);
-                if (field[i, j] == -1)
+                if (field[i, j].Item1 == -1)
                 {
                     count--;
-                    field[i, j] = type;
+                    field[i, j] = new Tuple<int, int>(type, 5);
                 }
             }
             FieldInvalidate();
@@ -296,7 +304,7 @@ namespace CorrDest
             bool falling_is_possible = true;
             for (int i = 0; i < falling_y.Length; i++)
             {
-                falling_is_possible &= (falling_y[i] - 1 >= 0) && (field[falling_x[i], falling_y[i] - 1] == -1);
+                falling_is_possible &= (falling_y[i] - 1 >= 0) && (field[falling_x[i], falling_y[i] - 1].Item1 == -1);
             }
             return falling_is_possible;
         }
@@ -310,7 +318,8 @@ namespace CorrDest
             {
                 g_failing.DrawImage(bg, get_rectangle(falling_x[i], falling_y[i]));
                 falling_y[i]--;
-                g_failing.DrawImage(blocks[sending[i]], get_rectangle(falling_x[i], falling_y[i]));
+                g_failing.FillRectangle(types[sending[i].Item1], get_rectangle(falling_x[i], falling_y[i]));
+                g_failing.DrawImage(positions[sending[i].Item2], get_rectangle(falling_x[i], falling_y[i]));
             }
             pictureBox1.Invalidate();
         }
@@ -322,15 +331,18 @@ namespace CorrDest
             falling_y[1] = v_y_amount - 1;
             sending[0] = sending[2];
             sending[1] = sending[3];
-            sending[2] = rng.Next(type_amount) + type_amount;
-            sending[3] = rng.Next(type_amount) + type_amount;
+            sending[2] = new Tuple<int, int>( rng.Next(type_amount),2);
+            sending[3] = new Tuple<int, int>(rng.Next(type_amount), 0);
             pb2.DrawImage(new Bitmap(bg, pictureBox2.Size), 0, 0);
-            pb2.DrawImage(blocks[sending[2]], 3, 3);
-            pb2.DrawImage(blocks[sending[3]], v_width + 3, 3);
+            pb2.FillRectangle(types[sending[2].Item1], new Rectangle(3, 3, v_width, v_width));
+            pb2.DrawImage(positions[sending[2].Item2], new Rectangle(3, 3, v_width, v_width));
+            pb2.FillRectangle(types[sending[3].Item1], new Rectangle(3 + v_width, 3, v_width, v_width));
+            pb2.DrawImage(positions[sending[3].Item2], new Rectangle(3 + v_width, 3, v_width, v_width));
             pictureBox2.Invalidate();
             for (int i = 0; i < 2; i++)
             {
-                g_failing.DrawImage(blocks[sending[i]], get_rectangle(falling_x[i], falling_y[i]));
+                g_failing.FillRectangle(types[sending[i].Item1], get_rectangle(falling_x[i], falling_y[i]));
+                g_failing.DrawImage(positions[sending[i].Item2], get_rectangle(falling_x[i], falling_y[i]));
                 pictureBox1.Invalidate(get_rectangle(falling_x[i], falling_y[i]));
             }
         }
