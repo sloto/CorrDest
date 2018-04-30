@@ -45,6 +45,7 @@
             this.pictureBox1.Size = new System.Drawing.Size(291, 362);
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
+            this.pictureBox1.Paint += new System.Windows.Forms.PaintEventHandler(this.pictureBox1_Paint);
             // 
             // pictureBox2
             // 
@@ -53,6 +54,7 @@
             this.pictureBox2.Size = new System.Drawing.Size(80, 50);
             this.pictureBox2.TabIndex = 1;
             this.pictureBox2.TabStop = false;
+            this.pictureBox2.Paint += new System.Windows.Forms.PaintEventHandler(this.pictureBox2_Paint);
             // 
             // timer1
             // 
@@ -62,7 +64,7 @@
             // 
             this.timer2.Tick += new System.EventHandler(this.timer2_Tick);
             // 
-            // moove_timer
+            // move_timer
             // 
             this.move_timer.Tick += new System.EventHandler(this.move_timer_Tick);
             // 

@@ -12,29 +12,91 @@ namespace CorrDest
 {
     public partial class Form1 : Form
     {
+        delegate Tuple<int, int> ChangeIndex(Tuple<int,int> xy);
+        ChangeIndex[] GoToNeighbor = new ChangeIndex[4];
+        
         Tuple<int,int>[,] field;
         Bitmap[] positions;
         Brush[] types;
         Bitmap bg;
-        Graphics g_static, g_failing, pb2;
+        //Graphics g_static, g_failing, pb2;
         Random rng;
         int virus_count, type_amount, v_y_amount, v_x_amount, v_width, period;
         int[] falling_x, falling_y;
         Tuple<int,int>[] sending;
-        bool left, right, up, down;
+        bool left, right, up, down, moved_r, moved_l;
 
         private void Form1_KeyUp(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Right) { right = false; }
-            if (e.KeyCode == Keys.Left) { left = false; }
-            move_timer.Enabled = left || right || up || down;
+            if (e.KeyCode == Keys.Right)
+            {
+                if (!moved_r)
+                {
+                    bool move_right = right;
+                    for (int i = 0; i < falling_x.Length; i++)
+                    {
+                        move_right &= sending[i].Item2 == 2 || ((falling_x[i] < v_x_amount - 1) && (field[falling_x[i] + 1, falling_y[i]].Item1 == -1));
+                    }
+                    if (move_right)
+                    {
+                        for (int i = 0; i < falling_x.Length; i++)
+                            field[falling_x[i], falling_y[i]] = new Tuple<int, int>(-1, -1);
+
+                        for (int i = 0; i < falling_x.Length; i++)
+                        {
+                            falling_x[i]++;
+                            field[falling_x[i], falling_y[i]] = sending[i];
+                        }
+                        pictureBox1.Invalidate();
+                        
+                    }
+
+                }
+                right = false;
+            }
+            if (e.KeyCode == Keys.Left)
+            {
+                if (!moved_l)
+                {
+                    bool move_left = left;
+                    for (int i = 0; i < falling_x.Length; i++)
+                    {
+                        move_left &= sending[i].Item2 == 0 || ((falling_x[i] > 0) && (field[falling_x[i] - 1, falling_y[i]].Item1 == -1));
+                    }
+                    if (move_left)
+                    {
+                        for (int i = 0; i < falling_x.Length; i++)
+                            field[falling_x[i], falling_y[i]] = new Tuple<int, int>(-1, -1);
+
+                        for (int i = 0; i < falling_x.Length; i++)
+                        {
+                            falling_x[i]--;
+                            field[falling_x[i], falling_y[i]] = sending[i];
+                        }
+                        pictureBox1.Invalidate();
+                    }
+                }
+                left = false;
+            }
+            if (e.KeyCode == Keys.Up)
+            {
+                if (up)
+                {
+                    Rotate();
+                }
+                up = false;
+            }
+            moved_r = false;
+            moved_l = false;
+            //move_timer.Enabled = left || right || up || down;
         }
 
         private void Form1_KeyDown(object sender, KeyEventArgs e)
         {
             right = e.KeyCode == Keys.Right;
             left = e.KeyCode == Keys.Left;
-            move_timer.Enabled = left || right || up || down;
+            up = e.KeyCode == Keys.Up;
+            //move_timer.Enabled = left || right || up || down;
             if (e.KeyCode == Keys.Space)
             {
                 timer1.Enabled = !timer1.Enabled;
@@ -48,36 +110,39 @@ namespace CorrDest
             bool move_left = left;
             for (int i = 0; i < falling_x.Length; i++)
             {
-                move_right &= (falling_x[i] < v_x_amount - 1) && (field[falling_x[i] + 1, falling_y[i]].Item1 == -1);
+                move_right &= sending[i].Item2 == 2 || ((falling_x[i] < v_x_amount - 1) && (field[falling_x[i] + 1, falling_y[i]].Item1 == -1));
             }
             for (int i = 0; i < falling_x.Length; i++)
             {
-                move_left &= (falling_x[i] > 0) && (field[falling_x[i] - 1, falling_y[i]].Item1 == -1);
+                move_left &= sending[i].Item2 == 0 || ((falling_x[i] > 0) && (field[falling_x[i] - 1, falling_y[i]].Item1 == -1));
             }
             if (move_right)
             {
                 for (int i = 0; i < falling_x.Length; i++)
-                    g_failing.DrawImage(bg, get_rectangle(falling_x[i], falling_y[i]));
+                    field[falling_x[i], falling_y[i]] = new Tuple<int, int>(-1, -1);
 
                 for (int i = 0; i < falling_x.Length; i++)
                 {
                     falling_x[i]++;
-                    DrawBlock(g_failing, sending[i], falling_x[i], falling_y[i]);
+                    field[falling_x[i], falling_y[i]] = sending[i];
                 }
                 pictureBox1.Invalidate();
+                moved_r = true;
             }
             if (move_left)
             {
                 for (int i = 0; i < falling_x.Length; i++)
-                    g_failing.DrawImage(bg, get_rectangle(falling_x[i], falling_y[i]));
+                    field[falling_x[i], falling_y[i]] = new Tuple<int, int>(-1, -1);
 
                 for (int i = 0; i < falling_x.Length; i++)
                 {
                     falling_x[i]--;
-                    DrawBlock(g_failing, sending[i], falling_x[i], falling_y[i]); 
+                    field[falling_x[i], falling_y[i]] = sending[i];
                 }
                 pictureBox1.Invalidate();
+                moved_l = true;
             }
+            
         }
         
         private void timer2_Tick(object sender, EventArgs e)
@@ -89,14 +154,20 @@ namespace CorrDest
             SelectDestructionField(falling_x[1], falling_y[1], ref toDestroy);
             foreach (Tuple<int, int> t in toDestroy)
             {
+                if (field[t.Item1, t.Item2].Item2 < 4 && field[t.Item1, t.Item2].Item2 >= 0) 
+                {
+                    Tuple<int, int> neighbor = GoToNeighbor[field[t.Item1, t.Item2].Item2](t);
+                    field[neighbor.Item1, neighbor.Item2] = new Tuple<int, int>(field[neighbor.Item1, neighbor.Item2].Item1, 4);
+                }
                 field[t.Item1, t.Item2] = new Tuple<int,int>(-1,-1);
 
             }
-            FieldInvalidate();   
-            
+            pictureBox1.Invalidate();
+            toDestroy.Sort((Tuple<int, int> x, Tuple<int, int> y) => { return x.Item2 - y.Item2; });
             
             timer2.Enabled = false;
             timer1.Enabled = true;
+            move_timer.Enabled = true;
             SpawnFalling();
         }
 
@@ -113,12 +184,26 @@ namespace CorrDest
                 {
                     field[falling_x[i], falling_y[i]] = sending[i];
                 }
-                FieldInvalidate();
+                pictureBox1.Invalidate();
                 timer2.Enabled = true;
                 timer1.Enabled = false;
                 move_timer.Enabled = false;
-                move_timer.Interval = 35;
+                //move_timer.Interval = 35;
             }
+        }
+
+        private void pictureBox2_Paint(object sender, PaintEventArgs e)
+        {          
+            e.Graphics.DrawImage(new Bitmap(bg, pictureBox2.Size), 0, 0);
+            e.Graphics.FillRectangle(types[sending[2].Item1], new Rectangle(3, 3, v_width, v_width));
+            e.Graphics.DrawImage(positions[sending[2].Item2], new Rectangle(3, 3, v_width, v_width));
+            e.Graphics.FillRectangle(types[sending[3].Item1], new Rectangle(3 + v_width, 3, v_width, v_width));
+            e.Graphics.DrawImage(positions[sending[3].Item2], new Rectangle(3 + v_width, 3, v_width, v_width));
+        }
+
+        private void pictureBox1_Paint(object sender, PaintEventArgs e)
+        {
+            FieldInvalidate(e.Graphics);
         }
 
         private void Form1_KeyPress(object sender, KeyPressEventArgs e)
@@ -166,9 +251,9 @@ namespace CorrDest
             //}
             pictureBox1.BackgroundImage = new Bitmap(bg, pictureBox1.Size);
             pictureBox2.BackgroundImage = new Bitmap(bg, pictureBox2.Size);
-            pb2 = Graphics.FromImage(pictureBox2.BackgroundImage);
-            g_static = Graphics.FromImage(pictureBox1.BackgroundImage);
-            g_failing = Graphics.FromImage(pictureBox1.BackgroundImage); 
+            //pb2 = Graphics.FromImage(pictureBox2.BackgroundImage);
+            //g_static = Graphics.FromImage(pictureBox1.BackgroundImage);
+            //g_failing = Graphics.FromImage(pictureBox1.BackgroundImage); 
             rng = new Random();
             virus_count = 15;
             SeedVirus(virus_count, 6);
@@ -176,9 +261,16 @@ namespace CorrDest
             {
                 sending[i] = new Tuple<int, int>(rng.Next(type_amount), ((i + 1) % 2) * 2);
             }
+            GoToNeighbor[0] = (Tuple<int, int> xy) => { return new Tuple<int, int>(xy.Item1 - 1, xy.Item2); };
+            GoToNeighbor[1] = (Tuple<int, int> xy) => { return new Tuple<int, int>(xy.Item1, xy.Item2 + 1); };
+            GoToNeighbor[2] = (Tuple<int, int> xy) => { return new Tuple<int, int>(xy.Item1 + 1, xy.Item2); };
+            GoToNeighbor[3] = (Tuple<int, int> xy) => { return new Tuple<int, int>(xy.Item1, xy.Item2 - 1); };
             SpawnFalling();
+            move_timer.Interval = 63;
             timer1.Enabled = true;
-            timer1.Interval = 500;
+            timer1.Interval = move_timer.Interval * v_x_amount;
+            move_timer.Enabled = true;
+            
             timer2.Enabled = false;
             timer2.Interval = timer1.Interval;
             right = left = up = down = false;
@@ -233,7 +325,8 @@ namespace CorrDest
             }
             if (horizontal.Count >= 2 || vertical.Count >= 2)
             {
-                burned.Add(new Tuple<int, int>(i, j));
+                if (!burned.Contains(new Tuple<int, int>(i, j)))
+                    burned.Add(new Tuple<int, int>(i, j));
             }
             if (horizontal.Count >= 2)
             {
@@ -257,22 +350,22 @@ namespace CorrDest
         }
 
        
-        private void FieldInvalidate()
+        private void FieldInvalidate(Graphics g)
         {
-            g_static.DrawImage(new Bitmap(bg, pictureBox1.Size), 0, 0);
+            g.DrawImage(new Bitmap(bg, pictureBox1.Size), 0, 0);
             for (int i = 0; i < v_x_amount; i++)
             {
                 for (int j = 0; j < v_y_amount; j++)
                 {
                     if (field[i, j].Item1 != -1)
                     {
-                        g_static.FillRectangle(types[field[i, j].Item1], get_rectangle(i, j));
-                        g_static.DrawImage(positions[field[i, j].Item2], get_rectangle(i, j));
+                        g.FillRectangle(types[field[i, j].Item1], get_rectangle(i, j));//заменить функцией
+                        g.DrawImage(positions[field[i, j].Item2], get_rectangle(i, j));
                     }
 
                 }
             }
-            pictureBox1.Invalidate();
+            //pictureBox1.Invalidate();
         }
 
         private void SeedVirus(int count, int free_space) //это же по значению, верно? если сломается, то из-за этого
@@ -296,7 +389,7 @@ namespace CorrDest
                     field[i, j] = new Tuple<int, int>(type, 5);
                 }
             }
-            FieldInvalidate();
+            pictureBox1.Invalidate();
 
         }
         private bool isFallingPossible()
@@ -304,7 +397,7 @@ namespace CorrDest
             bool falling_is_possible = true;
             for (int i = 0; i < falling_y.Length; i++)
             {
-                falling_is_possible &= (falling_y[i] - 1 >= 0) && (field[falling_x[i], falling_y[i] - 1].Item1 == -1);
+                falling_is_possible &= sending[i].Item2 == 3 || ( (falling_y[i] - 1 >= 0) && (field[falling_x[i], falling_y[i] - 1].Item1 == -1));
             }
             return falling_is_possible;
         }
@@ -314,15 +407,62 @@ namespace CorrDest
             //{
             //    return;
             //}
+            for (int i = 0; i < falling_y.Length; i++)
+                field[falling_x[i], falling_y[i]] = new Tuple<int, int>(-1, -1);
+
             for (int i = 0; i < falling_y.Length; i++) //перерисовывать несколько маленьких кусочков или сразу все поле?Ы
             {
-                g_failing.DrawImage(bg, get_rectangle(falling_x[i], falling_y[i]));
+                
                 falling_y[i]--;
-                g_failing.FillRectangle(types[sending[i].Item1], get_rectangle(falling_x[i], falling_y[i]));
-                g_failing.DrawImage(positions[sending[i].Item2], get_rectangle(falling_x[i], falling_y[i]));
+                field[falling_x[i], falling_y[i]] = sending[i];
             }
             pictureBox1.Invalidate();
         }
+
+        private void Rotate()
+        {
+            if (sending[1].Item2 == 0 && falling_y[1] + 1 < v_y_amount && field[falling_x[1], falling_y[1] + 1].Item1 == -1)
+            {
+                field[falling_x[0], falling_y[0]] = new Tuple<int, int>(-1, -1);
+                field[falling_x[1], falling_y[1]] = new Tuple<int, int>(-1, -1);
+                falling_x[0] = falling_x[1];
+                falling_y[0] = falling_y[1] + 1;
+
+            }
+            else if(sending[1].Item2 == 1 && falling_x[1] + 1 < v_x_amount && field[falling_x[1] + 1, falling_y[1]].Item1 == -1)
+            {
+                field[falling_x[0], falling_y[0]] = new Tuple<int, int>(-1, -1);
+                field[falling_x[1], falling_y[1]] = new Tuple<int, int>(-1, -1);
+                falling_x[0] = falling_x[1] + 1;
+                falling_y[0] = falling_y[1];
+            }
+            else if (sending[1].Item2 == 2 && falling_y[1] -1 >= 0 && field[falling_x[1], falling_y[1] - 1].Item1 == -1)
+            {
+                field[falling_x[0], falling_y[0]] = new Tuple<int, int>(-1, -1);
+                field[falling_x[1], falling_y[1]] = new Tuple<int, int>(-1, -1);
+                falling_x[0] = falling_x[1];
+                falling_y[0] = falling_y[1] - 1;
+
+            }
+            else if (sending[1].Item2 == 3 && falling_x[1] - 1 >= 0 && field[falling_x[1] - 1, falling_y[1]].Item1 == -1)
+            {
+                field[falling_x[0], falling_y[0]] = new Tuple<int, int>(-1, -1);
+                field[falling_x[1], falling_y[1]] = new Tuple<int, int>(-1, -1);
+                falling_x[0] = falling_x[1] - 1;
+                falling_y[0] = falling_y[1];
+            }
+            else
+            {
+                return;
+            }
+            sending[0] = new Tuple<int, int>(sending[0].Item1, (sending[0].Item2 + 1) % 4);
+            sending[1] = new Tuple<int, int>(sending[1].Item1, (sending[1].Item2 + 1) % 4);
+            field[falling_x[0], falling_y[0]] = sending[0];
+            field[falling_x[1], falling_y[1]] = sending[1];
+
+            pictureBox1.Invalidate();
+        }
+
         private void SpawnFalling()
         {
             falling_x[0] = v_x_amount / 2 - 1;
@@ -333,18 +473,21 @@ namespace CorrDest
             sending[1] = sending[3];
             sending[2] = new Tuple<int, int>( rng.Next(type_amount),2);
             sending[3] = new Tuple<int, int>(rng.Next(type_amount), 0);
-            pb2.DrawImage(new Bitmap(bg, pictureBox2.Size), 0, 0);
-            pb2.FillRectangle(types[sending[2].Item1], new Rectangle(3, 3, v_width, v_width));
-            pb2.DrawImage(positions[sending[2].Item2], new Rectangle(3, 3, v_width, v_width));
-            pb2.FillRectangle(types[sending[3].Item1], new Rectangle(3 + v_width, 3, v_width, v_width));
-            pb2.DrawImage(positions[sending[3].Item2], new Rectangle(3 + v_width, 3, v_width, v_width));
+            //pb2.DrawImage(new Bitmap(bg, pictureBox2.Size), 0, 0);
+            //pb2.FillRectangle(types[sending[2].Item1], new Rectangle(3, 3, v_width, v_width));
+            //pb2.DrawImage(positions[sending[2].Item2], new Rectangle(3, 3, v_width, v_width));
+            //pb2.FillRectangle(types[sending[3].Item1], new Rectangle(3 + v_width, 3, v_width, v_width));
+            //pb2.DrawImage(positions[sending[3].Item2], new Rectangle(3 + v_width, 3, v_width, v_width));
+            
             pictureBox2.Invalidate();
             for (int i = 0; i < 2; i++)
             {
-                g_failing.FillRectangle(types[sending[i].Item1], get_rectangle(falling_x[i], falling_y[i]));
-                g_failing.DrawImage(positions[sending[i].Item2], get_rectangle(falling_x[i], falling_y[i]));
-                pictureBox1.Invalidate(get_rectangle(falling_x[i], falling_y[i]));
+                //g_failing.FillRectangle(types[sending[i].Item1], get_rectangle(falling_x[i], falling_y[i]));
+                //g_failing.DrawImage(positions[sending[i].Item2], get_rectangle(falling_x[i], falling_y[i]));
+                field[falling_x[i], falling_y[i]] = sending[i];
+                
             }
+            pictureBox1.Invalidate();
         }
     }
 }
