@@ -14,7 +14,8 @@ namespace CorrDest
     {
         delegate Tuple<int, int> ChangeIndex(Tuple<int,int> xy);
         ChangeIndex[] GoToNeighbor = new ChangeIndex[4];
-        
+        List<Tuple<int, int>> toDestroy;
+        List<int>[] positionsToFall; 
         Tuple<int,int>[,] field;
         Bitmap[] positions;
         Brush[] types;
@@ -30,7 +31,7 @@ namespace CorrDest
         {
             if (e.KeyCode == Keys.Right)
             {
-                if (!moved_r)
+                if (!moved_r && move_timer.Enabled)
                 {
                     bool move_right = right;
                     for (int i = 0; i < falling_x.Length; i++)
@@ -56,7 +57,7 @@ namespace CorrDest
             }
             if (e.KeyCode == Keys.Left)
             {
-                if (!moved_l)
+                if (!moved_l && move_timer.Enabled)
                 {
                     bool move_left = left;
                     for (int i = 0; i < falling_x.Length; i++)
@@ -80,7 +81,7 @@ namespace CorrDest
             }
             if (e.KeyCode == Keys.Up)
             {
-                if (up)
+                if (up && move_timer.Enabled)
                 {
                     Rotate();
                 }
@@ -147,28 +148,61 @@ namespace CorrDest
         
         private void timer2_Tick(object sender, EventArgs e)
         {
-            List<Tuple<int, int>> toDestroy = new List<Tuple<int, int>>();
-            //bool[,] burned = new bool[v_x_amount, v_y_amount];
-            //DFS(falling_x[0], falling_y[0], ref burned, ref toDestroy);
-            SelectDestructionField(falling_x[0], falling_y[0], ref toDestroy);
-            SelectDestructionField(falling_x[1], falling_y[1], ref toDestroy);
-            foreach (Tuple<int, int> t in toDestroy)
+            bool isFallingOver = true;
+            for (int i = 0; i < v_y_amount - 1; i++)
             {
-                if (field[t.Item1, t.Item2].Item2 < 4 && field[t.Item1, t.Item2].Item2 >= 0) 
+                foreach(int t in positionsToFall[i])
                 {
-                    Tuple<int, int> neighbor = GoToNeighbor[field[t.Item1, t.Item2].Item2](t);
-                    field[neighbor.Item1, neighbor.Item2] = new Tuple<int, int>(field[neighbor.Item1, neighbor.Item2].Item1, 4);
+                    field[t, i] = field[t, i + 1];
+                    field[t, i + 1] = new Tuple<int, int>(-1, -1);
+                    
                 }
-                field[t.Item1, t.Item2] = new Tuple<int,int>(-1,-1);
-
+                foreach (int t in positionsToFall[i])
+                {
+                    if (i + 2 < v_y_amount && field[t,i+2].Item1 != -1)
+                    {
+                        if(field[t, i + 2].Item2 == 0 && field[t - 1, i + 1].Item1 == -1)
+                        {
+                            positionsToFall[i + 1].Add(t);
+                        }
+                        else if(field[t, i + 2].Item2 == 2 && field[t + 1, i + 1].Item1 == -1)
+                        {
+                            positionsToFall[i + 1].Add(t);
+                        }
+                        else if(field[t,i+2].Item2 != 5)
+                        {
+                            positionsToFall[i + 1].Add(t);
+                        }
+                    }
+                    if (i > 0 && field[t,i-1].Item1 == -1)
+                    {
+                        if (field[t, i].Item2 == 0 && field[t - 1, i - 1].Item1 == -1)
+                        {
+                            positionsToFall[i - 1].Add(t);
+                            isFallingOver = false;
+                        }
+                        else if (field[t, i].Item2 == 2 && field[t + 1, i - 1].Item1 == -1)
+                        {
+                            positionsToFall[i - 1].Add(t);
+                            isFallingOver = false;
+                        }
+                        else if (field[t, i].Item2 != 5)
+                        {
+                            positionsToFall[i - 1].Add(t);
+                            isFallingOver = false;
+                        }
+                    }
+                }
+                positionsToFall[i] = new List<int>();
             }
             pictureBox1.Invalidate();
-            toDestroy.Sort((Tuple<int, int> x, Tuple<int, int> y) => { return x.Item2 - y.Item2; });
-            
-            timer2.Enabled = false;
-            timer1.Enabled = true;
-            move_timer.Enabled = true;
-            SpawnFalling();
+            if (isFallingOver)
+            {
+                timer2.Enabled = false;
+                timer1.Enabled = true;
+                move_timer.Enabled = true;
+                SpawnFalling();
+            }
         }
 
         private void timer1_Tick(object sender, EventArgs e)
@@ -180,14 +214,59 @@ namespace CorrDest
             }
             else
             {
-                for (int i = 0; i < falling_x.Length; i++)
-                {
-                    field[falling_x[i], falling_y[i]] = sending[i];
-                }
-                pictureBox1.Invalidate();
-                timer2.Enabled = true;
                 timer1.Enabled = false;
                 move_timer.Enabled = false;
+                //for (int i = 0; i < falling_x.Length; i++)
+                //{
+                //    field[falling_x[i], falling_y[i]] = sending[i];
+                //}
+                toDestroy = new List<Tuple<int, int>>();
+                SelectDestructionField(falling_x[0], falling_y[0], ref toDestroy);
+                SelectDestructionField(falling_x[1], falling_y[1], ref toDestroy);
+                //toDestroy.Sort((Tuple<int, int> x, Tuple<int, int> y) => { return x.Item2 - y.Item2; });
+                for (int i = 0; i < v_y_amount; i++)
+                {
+                    positionsToFall[i] = new List<int>();
+                }
+                foreach (Tuple<int, int> t in toDestroy)
+                {
+                    if (field[t.Item1, t.Item2].Item2 < 4 && field[t.Item1, t.Item2].Item2 >= 0)
+                    {
+                        Tuple<int, int> neighbor = GoToNeighbor[field[t.Item1, t.Item2].Item2](t);
+                        if(neighbor.Item2 > 0 && field[neighbor.Item1, neighbor.Item2 - 1].Item1 == -1)
+                        {
+                            positionsToFall[neighbor.Item2 - 1].Add(neighbor.Item1);
+                        }
+                        field[neighbor.Item1, neighbor.Item2] = new Tuple<int, int>(field[neighbor.Item1, neighbor.Item2].Item1, 4);
+                    }
+                    field[t.Item1, t.Item2] = new Tuple<int, int>(-1, -1);
+                    
+                }
+                foreach (Tuple<int, int> t in toDestroy)
+                {
+                    if (t.Item2 < v_y_amount - 1 && field[t.Item1, t.Item2 + 1].Item1 != -1)    
+                    {
+                        if(field[t.Item1, t.Item2 + 1].Item2 == 0 && field[t.Item1 - 1, t.Item2].Item1 == -1)
+                        {
+                            positionsToFall[t.Item2].Add(t.Item1);
+                            positionsToFall[t.Item2].Add(t.Item1 - 1);
+                        }
+                        else if (field[t.Item1, t.Item2 + 1].Item2 == 2 && field[t.Item1 + 1, t.Item2].Item1 == -1)
+                        {
+                            positionsToFall[t.Item2].Add(t.Item1);
+                            positionsToFall[t.Item2].Add(t.Item1 + 1);
+                        }
+                        else if (field[t.Item1, t.Item2 + 1].Item2 != 5)
+                        {
+                            positionsToFall[t.Item2].Add(t.Item1);
+                        }
+                    }
+                }
+
+                pictureBox1.Invalidate();
+                timer2.Enabled = true;
+                
+                
                 //move_timer.Interval = 35;
             }
         }
@@ -229,12 +308,13 @@ namespace CorrDest
             falling_y = new int[2];
             sending = new Tuple<int, int>[4];
             List<Tuple<int, int>> burning_blocks = new List<Tuple<int, int>>();
+            positionsToFall = new List<int>[v_y_amount];
             try
             {
                 bg = Properties.Resources.background;
-                positions[0] = new Bitmap( Properties.Resources.msk0, v_width, v_width);
-                positions[1] = new Bitmap( Properties.Resources.msk1, v_width, v_width);
-                positions[2] = new Bitmap( Properties.Resources.msk2, v_width, v_width);
+                positions[0] = new Bitmap(Properties.Resources.msk0, v_width, v_width);
+                positions[1] = new Bitmap(Properties.Resources.msk1, v_width, v_width);
+                positions[2] = new Bitmap(Properties.Resources.msk2, v_width, v_width);
                 positions[3] = new Bitmap(Properties.Resources.msk3, v_width, v_width);
                 positions[4] = new Bitmap(Properties.Resources.msk4, v_width, v_width);
                 positions[5] = new Bitmap(Properties.Resources.msk5, v_width, v_width);
@@ -245,15 +325,8 @@ namespace CorrDest
                 Close();
                 return;
             }
-            //for (int i = 0; i < positions.Length; i++)
-            //{
-            //    //positions[i].MakeTransparent();
-            //}
             pictureBox1.BackgroundImage = new Bitmap(bg, pictureBox1.Size);
             pictureBox2.BackgroundImage = new Bitmap(bg, pictureBox2.Size);
-            //pb2 = Graphics.FromImage(pictureBox2.BackgroundImage);
-            //g_static = Graphics.FromImage(pictureBox1.BackgroundImage);
-            //g_failing = Graphics.FromImage(pictureBox1.BackgroundImage); 
             rng = new Random();
             virus_count = 15;
             SeedVirus(virus_count, 6);
@@ -368,7 +441,7 @@ namespace CorrDest
             //pictureBox1.Invalidate();
         }
 
-        private void SeedVirus(int count, int free_space) //это же по значению, верно? если сломается, то из-за этого
+        private void SeedVirus(int count, int free_space) 
         {
             
             for (int i = 0; i < v_x_amount; i++)
@@ -410,7 +483,7 @@ namespace CorrDest
             for (int i = 0; i < falling_y.Length; i++)
                 field[falling_x[i], falling_y[i]] = new Tuple<int, int>(-1, -1);
 
-            for (int i = 0; i < falling_y.Length; i++) //перерисовывать несколько маленьких кусочков или сразу все поле?Ы
+            for (int i = 0; i < falling_y.Length; i++) 
             {
                 
                 falling_y[i]--;
